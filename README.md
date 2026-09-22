@@ -22,6 +22,19 @@ TeamScheduleValidator/
 └── README.md
 ```
 
+## Schedule service overview
+
+The schedule service should implement the IValidatableScheduleService interface
+
+```csharp
+public interface IValidatableScheduleService
+{
+    (List<TeamErrorReportDTO> validationErrors, List<ScheduleInputDTO> validEntries) ValidateSchedule(List<ScheduleInputDTO>); 
+}
+```
+`ScheduleInputDTO` describes an entry and follows the same structure as the one presented in the first section of this document
+`TeamsErrorReportDTO` describes the error result for a team. Will contain all the entries of that team, and the list of errors (from all levels of erros, as specified in the following section)
+
 # Validation 
 
 This project uses FluentValidation library to build strongly typed validation rules, with a structural and maintainable design. The validations will run on three different levels:
@@ -29,7 +42,7 @@ This project uses FluentValidation library to build strongly typed validation ru
 - **Employee**: validates data between all entries of an employee
 - **Team**: validates data between all entries of a team
 
-# Rules
+## Rules
 
 ### Entry level validations
 - No shift set when pto is true
@@ -43,15 +56,12 @@ This project uses FluentValidation library to build strongly typed validation ru
 ### Team level validations
 - Each team must have all shifts filled with at least one employee, except when all employees are on vacation
 
-# Schedule service overview
+# Validation algorithm
 
-The schedule service should implement the IValidatableScheduleService interface
+The algorithm will follow a structure of sorting plus control break. The main loop will take advantage of working with sorted data to aggregate **employee** and **team** schedule entries, and run all validations in all levels in one pass.
 
-```csharp
-public interface IValidatableScheduleService
-{
-    TeamsErrorReportDTO ValidateSchedule(List<ScheduleInputDTO>); 
-}
-```
+![High level schema](https://i.imageupload.app/068c4440e41e1beb99c8.svg)
+
+
 
 
