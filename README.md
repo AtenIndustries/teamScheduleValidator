@@ -56,11 +56,56 @@ This project uses FluentValidation library to build strongly typed validation ru
 ### Team level validations
 - Each team must have all shifts filled with at least one employee, except when all employees are on vacation
 
-# Validation algorithm
+## Validators configuration
 
-The algorithm will follow a structure of sorting plus control break. The main loop will take advantage of working with sorted data to aggregate **employee** and **team** schedule entries, and run all validations in all levels in one pass.
+There are 3 levels of validation that bring a challenge if dependency injection is used, two of them using a list of data of the same type. In case of using .Net 8+, the best approach is using keyed services and configure them like this in Program.cs
+
+```csharp
+builder.Services.AddScoped<IValidator, EntryValidator>();
+builder.Services.AddKeyedScoped<IValidator, EmployeeLevelValidator>("EmployeeLevelValidator");
+builder.Services.AddKeyedScoped<IValidator, TeamLevelValidator>("TLevelValidator");
+```
+
+```csharp
+public class ValidatableScheduleService
+{
+    private readonly IValidator _entryValidator;
+    private readonly IValidator _employeeValidator;
+    private readonly IValidator _teamValidator;
+
+    public MyConsumer(
+        IValidator entryValidator,
+        [FromKeyedServices("EmployeeLevelValidator")] IValidator employeeValidator,
+        [FromKeyedServices("C")] IValidator teamValidator)
+    {
+        _entryValidator = entryValidator;
+        _employeeValidator = employeeValidator;
+        _teamValidator = teamValidator;
+    }
+....
+}
+```
+
+
+## Algorithm
+
+The algorithm will follow a structure of sorting plus control break. The main loop will take advantage of working with sorted data to aggregate **employee** and **team** schedule entries, and run all validations in all levels in one pass. 
 
 ![High level schema](https://i.imageupload.app/068c4440e41e1beb99c8.svg)
+
+In each iteration:
+
+1. Aggregate current entry on the current employee and current team list
+2. Run entry level validations an aggregate any entry level error results
+3. If all employee entries are aggregated (by check if next entry employee id is different from current):
+    1. Run employee validations
+    2. Aggregate validations
+4. Check if all team entries are aggregated (by check if next entry team name is different from current):
+    1. Run team validations
+    2. Create team error report with entries and a list of validation errors (entry, employee and team levels)
+
+![Low level schema](https://i.imageupload.app/1b0a4835fb5eca40a8e9.svg)
+
 
 
 
