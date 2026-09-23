@@ -47,6 +47,8 @@ This project uses FluentValidation library to build strongly typed validation ru
 - **Employee**: validates data between all entries of an employee
 - **Team**: validates data between all entries of a team
 
+In this project approach, any validation error in any level will render ALL of the team schedule invalid. This approach avoids inconsistency problems in the final data. 
+
 ## Rules
 
 ### Entry level validations
@@ -99,20 +101,49 @@ public class ValidatableScheduleService
 ```
 # Entry level Validator
 
-This would have to implement three rules. **shift** must be empty when **pto** is true, but must have a valid value when **pto** is false and **shift** must be valid for the **contractType**.
+Implements three specific rules. **shift** must be empty when **pto** is true, but must have a valid value when **pto** is false and **shift** must be valid for the **contractType**.
 
 ```csharp
     RuleFor(x => x.Shift).Empty().When(x => x.PTO).WithMessage("Shift must be empty on PTO");
     RuleFor(x => x.Shift).Must(shift => validShifts.Contains(shift)).When(x => !x.PTO).WithMessage("Shift must be set when not on PTO");
 
     foreach(string contractType in validContractTypes){
-        RuleFor(x => x.Shift).Must(shift => contractTypeShifts[contractType].Contains(shift)).When(x=>x.ContractType == contractType && !PTO).WithMessage($"Invalid shift {shift} for {contractType} contract");
+        RuleFor(x => x.Shift).Must(shift => contractTypeShifts[contractType].Contains(shift)).When(x=>x.ContractType == contractType && !x.PTO).WithMessage($"Invalid shift {shift} for {contractType} contract");
     }
 
     RuleFor(x=>x.ContractType).NotEmpty().WithMessage("ContractType must not me empty);
     // Apply not empty rules for the other fields
     ...
 ```
+> [!Note]
+> Variables like `validShifts`, `validContractTypes`, `contractTypeShifts` would be loaded from appSettings. In a production environment would be advisable .
+
+# Employee level Validator
+
+Ensures that there is only one shift per day of work and max consecutive days for each contract type.
+
+```csharp
+    RuleFor(employeeScheduleList=>employeeScheduleList.Select(employeeScheduleList.Date)).Must(dates=>dates.Count()==dates.Distinct.Count()).WithMessage($"Employee should only have one shift per day of work")
+    foreach(string contractType in validContractTypes){
+        int maxConsecutiveDays = int.MaxValue;
+        maxConsecutiveDaysContractType.TryGetValue(contractType, out maxConsecutiveDays)
+        RuleFor(employeeScheduleList=>GetConsecutiveDayCounts(contractType, employeeScheduleList)).Must(counts=>counts.Where(count=>count>maxConsecutiveDays).Count()==0) 
+    } 
+```
+> [!Note]
+> `GetConsecutiveDayCounts` will be a function that determines checks if there are consecutive days of the same contract type, and returns the aggregated counts of consecutive days
+> The RuleFor for max consecutive days cannot be enclosed in an if based on `TryGetValye` result, because the setting in `maxConsecutiveDaysContractType` can be changed in a production environment with app settings being both set in app and in database
+
+
+# Team level Validator
+
+Ensures that all shifts are filled if there is a minimum number of employees available. This validation will use dependent rules to avoid conflicts
+```csharp
+    RuleFor(teamScheduleList=>teamScheduleList.Select(teamScheduleList.Shift).Distinct().Count()).Must(count=>count==validShifts.Length)
+        .DependentRules(()=>{
+            RuleFor(teamScheduleList=>teamScheduleList).Must(teamScheduleList=>teamScheduleList.Count()!=teamScheduleList.Select(t=>t.PTO).Where(t=>t.PTO).Count())
+        });
+``` 
 
 
 ## Algorithm
