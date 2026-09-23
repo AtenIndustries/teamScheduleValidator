@@ -58,31 +58,35 @@ This project uses FluentValidation library to build strongly typed validation ru
 
 ## Validators configuration
 
-There are 3 levels of validation that bring a challenge if dependency injection is used, two of them using a list of data of the same type. In case of using .Net 8+, the best approach is using keyed services and configure them like this in Program.cs
+There are 3 levels of validation that bring a challenge if dependency injection is used, 2 of them using a list of data of the same type. In case of using .Net 8+, the best approach is using keyed services and configure them like this in Program.cs
 
 ```csharp
-builder.Services.AddScoped<IValidator, EntryValidator>();
-builder.Services.AddKeyedScoped<IValidator, EmployeeLevelValidator>("EmployeeLevelValidator");
-builder.Services.AddKeyedScoped<IValidator, TeamLevelValidator>("TLevelValidator");
+builder.Services.AddScoped<IValidator<ScheduleInputDTO>, EntryValidator>();
+builder.Services.AddKeyedScoped<IValidator<List<ScheduleInputDTO>>, EmployeeLevelValidator>("EmployeeLevelValidator");
+builder.Services.AddKeyedScoped<IValidator<List<ScheduleInputDTO>>, TeamLevelValidator>("TeamLevelValidator");
 ```
+
+An implementation of `IValidatableScheduleService` would get this validators injected like this
 
 ```csharp
 public class ValidatableScheduleService
 {
-    private readonly IValidator _entryValidator;
-    private readonly IValidator _employeeValidator;
-    private readonly IValidator _teamValidator;
+    private readonly IValidator<ScheduleInputDTO> _entryValidator;
+    private readonly IValidator<List<ScheduleInputDTO>> _employeeValidator;
+    private readonly IValidator<List<ScheduleInputDTO>> _teamValidator;
 
     public MyConsumer(
-        IValidator entryValidator,
-        [FromKeyedServices("EmployeeLevelValidator")] IValidator employeeValidator,
-        [FromKeyedServices("C")] IValidator teamValidator)
+        IValidator<ScheduleInputDTO>  entryValidator,
+        [FromKeyedServices("EmployeeLevelValidator")] IValidator<List<ScheduleInputDTO>> employeeValidator,
+        [FromKeyedServices("TeamLevelValidator")] IValidator<List<ScheduleInputDTO>> teamValidator)
     {
         _entryValidator = entryValidator;
         _employeeValidator = employeeValidator;
         _teamValidator = teamValidator;
     }
-....
+
+    public (List<TeamErrorReportDTO> validationErrors, List<ScheduleInputDTO> validEntries) ValidateSchedule(List<ScheduleInputDTO>){....}
+
 }
 ```
 
