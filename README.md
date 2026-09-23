@@ -9,6 +9,11 @@ This validator validates data from a list of schedule entries with the following
 - **contractType**: "full-time" or "part-time"
 - **pto**: boolean that specifies if a employee is on paid time off during that day
 
+# Tech stack
+- **.NET Core 10**
+- **FluentValidation**
+- **xUnit**
+
 # Project Structure
 
 ```
@@ -47,18 +52,21 @@ This project uses FluentValidation library to build strongly typed validation ru
 ### Entry level validations
 - No shift set when pto is true
 - If shift is set, pto should be false
+- Part-time employees cannot be in night shift (check if this does not collide with team level validations)
 
 ### Employee level validations
 - Only one shift per day of work
 - No consecutive night shifts
-- Part-time employees cannot be in night shift (check if this does not collide with team level validations)
 
 ### Team level validations
 - Each team must have all shifts filled with at least one employee, except when all employees are on vacation
 
+### App settings
+
+
 ## Validators configuration
 
-There are 3 levels of validation that bring a challenge if dependency injection is used, 2 of them using a list of data of the same type. In case of using .Net 8+, the best approach is using keyed services and configure them like this in Program.cs
+There are 3 levels of validation that bring a challenge if dependency injection is used, 2 of them using a list of data of the same type. In case of using .Net 8+, the best approach is using keyed services to inject the validators in Program.cs.
 
 ```csharp
 builder.Services.AddScoped<IValidator<ScheduleInputDTO>, EntryValidator>();
@@ -66,7 +74,7 @@ builder.Services.AddKeyedScoped<IValidator<List<ScheduleInputDTO>>, EmployeeLeve
 builder.Services.AddKeyedScoped<IValidator<List<ScheduleInputDTO>>, TeamLevelValidator>("TeamLevelValidator");
 ```
 
-An implementation of `IValidatableScheduleService` would get this validators injected like this
+An implementation of `IValidatableScheduleService` will then use the keys to properly map the correct validator for each validation level.
 
 ```csharp
 public class ValidatableScheduleService
@@ -88,6 +96,22 @@ public class ValidatableScheduleService
     public (List<TeamErrorReportDTO> validationErrors, List<ScheduleInputDTO> validEntries) ValidateSchedule(List<ScheduleInputDTO>){....}
 
 }
+```
+# Entry level Validator
+
+This would have to implement three rules. **shift** must be empty when **pto** is true, but must have a valid value when **pto** is false and **shift** must be valid for the **contractType**.
+
+```csharp
+    RuleFor(x => x.Shift).Empty().When(x => x.PTO).WithMessage("Shift must be empty on PTO");
+    RuleFor(x => x.Shift).Must(shift => validShifts.Contains(shift)).When(x => !x.PTO).WithMessage("Shift must be set when not on PTO");
+
+    foreach(string contractType in validContractTypes){
+        RuleFor(x => x.Shift).Must(shift => contractTypeShifts[contractType].Contains(shift)).When(x=>x.ContractType == contractType && !PTO).WithMessage($"Invalid shift {shift} for {contractType} contract");
+    }
+
+    RuleFor(x=>x.ContractType).NotEmpty().WithMessage("ContractType must not me empty);
+    // Apply not empty rules for the other fields
+    ...
 ```
 
 
