@@ -57,6 +57,24 @@ public interface IValidatableScheduleService
 `ScheduleInputDTO` describes an entry and follows the same structure as the one presented in the first section of this document
 `TeamsErrorReportDTO` describes the error result for a team. Will contain all the entries of that team, and the list of errors (from all levels of erros, as specified in the following section)
 
+
+# App settings
+To increase the flexibility of validators, the app will have a set of configurable settings to define some validation properties.
+
+```json
+{
+    "validShifts": ["morning", "afternoon", "night"],
+    "validContractTypes": ["full-time", "part-time"],
+    "contractTypeShifts":{
+        "full-time": ["morning", "afternoon", "night"],
+        "part-time": ["morning", "afternoon"]
+    },
+    "maxConsecutiveDaysShift":{
+        "night": 1,
+    },
+    "maxAllowedShiftsPerDay":1
+}
+```
 # Validation 
 
 This project uses FluentValidation library to build strongly typed validation rules, with a structural and maintainable design. The validations will run on three different levels:
@@ -79,8 +97,6 @@ In this project approach, any validation error in any level will render ALL of t
 
 ### Team level validations
 - Each team must have all shifts filled with at least one employee, except when all employees are on vacation
-
-### App settings
 
 
 ## Validators configuration
