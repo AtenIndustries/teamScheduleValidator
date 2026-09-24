@@ -44,7 +44,7 @@ TeamScheduleValidator/
 }
 ```
 
-## Schedule service overview
+## Validatable schedule service overview
 
 The schedule service should implement the IValidatableScheduleService interface
 
