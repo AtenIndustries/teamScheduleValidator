@@ -68,7 +68,7 @@ In this project approach, any validation error in any level will render ALL of t
 
 ## Validators configuration
 
-There are 3 levels of validation that bring a challenge if dependency injection is used, 2 of them using a list of data of the same type. In case of using .Net 8+, the best approach is using keyed services to inject the validators in Program.cs.
+There are 3 levels of validation that bring a challenge if dependency injection is used, 2 of them using a list of data of the same type. In case of using .Net 8+, the best approach is using keyed services to inject the validators in Program.cs. The proposed injected would be Scoped because this validators will have state and, if needed, change to Transient. 
 
 ```csharp
 builder.Services.AddScoped<IValidator<ScheduleInputDTO>, EntryValidator>();
@@ -299,8 +299,8 @@ This tests will validate the behaviour of the ValidatableScheduleService, not wi
 | **Schedule has employees with consecutive night shifts on part-time and doesn't have all shifts for one of the dates**|<pre>[[<br>    {"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"night", "contractType":"part-time", "pto":false},[<br>    {"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"night", "contractType":"part-time", "pto":false},[<br>    {"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"full-time", "pto":false},[<br>    {"employeeId":3, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"full-time", "pto":false},[<br>    {"employeeId":11, "team":"AwesomeTeam", "date":"2026-09-28", "shift":"", "contractType":"full-time", "pto":true},[<br>    {"employeeId":2, "team":"AwesomeTeam", "date":"2026-09-28", "shift":"night", "contractType":"full-time", "pto":false},[<br>    {"employeeId":3, "team":"AwesomeTeam", "date":"2026-09-28", "shift":"morning", "contractType":"full-time", "pto":false},[<br>    {"employeeId":4, "team":"AwesomeTeam", "date":"2026-09-28", "shift":"afternoon", "contractType":"full-time", "pto":false},[<br>    {"employeeId":5, "team":"AwesomeTeam", "date":"2026-09-29", "shift":"morning", "contractType":"full-time", "pto":false},[<br>    {"employeeId":6, "team":"AwesomeTeam", "date":"2026-09-29", "shift":"", "contractType":"full-time", "pto":true}[<br>  ]</pre> | <pre>Returns multiple validation errors like "Invalid shift night for part-time contract", <br>  "Employee with id 1} has more than 1 shifts at 2026-09-24.", <br>  "Employee with id 1 has more than 1 consecutive days of work for night shift." <br>  and "Error on 2026-09-29: 2 filled shifts (expected: 3)" </pre>|
 
 
-
-
 # Maintenance
+
+This proposal focuses on a solution that is faster, but on the other hand will require maintenance and app updates every-time a new rule is added. It's advisable that any new rule added becomes configurable. For example, adding a general calendar rule to limit the amount of night shifts a company does per month to 5 would require adding another level of rules: shift level. This requires to add one more aggregation to ValidatableScheduleService, similar to what is done at Team or Employee level, and one more keyed service and validate the amount of night shifts. To increase flexibility, the configuration of the app would have to include a configuration for the max shifts per kind of shift and per month. 
 
 
