@@ -124,6 +124,21 @@ Ensures that there is only one shift per day of work and max consecutive days fo
 ```csharp
 RuleFor(employeeScheduleList => employeeScheduleList)
     .Custom((employeeScheduleList, context) =>
+    {
+        foreach(var g in employeeScheduleList.GroupBy(e=>e.Date)){
+            var date = g.Key;
+            if g.Count > maxAllowedShiftsPerDay{
+                var e = g.First();
+                context.AddFailure(new FluentValidation.Results.ValidationFailure(
+                    nameof(employeeScheduleList),
+                    $"Employee with id {g.EmployeeId} has more than {maxAllowedShiftsPerDay} shifts at {date:yyyy-MM-dd}."
+                ));
+            }   
+        }
+    });
+
+RuleFor(employeeScheduleList => employeeScheduleList)
+    .Custom((employeeScheduleList, context) =>
     {  
         var firstSchedule = employeeScheduleList.FirstOrDefault();
         int employeeId = firstSchedule?.EmployeeId ?? 0; 
@@ -214,7 +229,8 @@ For test purpose, the validators would be injected with settings. Also, for the 
     },
     "maxConsecutiveDaysShift":{
         "night": 1,
-    }
+    },
+    "maxAllowedShiftsPerDay":1
 }
 ```
     
