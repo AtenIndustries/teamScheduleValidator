@@ -169,7 +169,7 @@ RuleFor(employeeScheduleList => employeeScheduleList)
 
 # Team level Validator
 
-Ensures that all shifts are filled if there are employees available.
+Ensures that all shifts are filled if there are employees available, except when everyone is on PTO.
 
 ```csharp
     RuleFor(teamScheduleList=>teamScheduleList)
@@ -302,5 +302,55 @@ This tests will validate the behaviour of the ValidatableScheduleService, not wi
 # Maintenance
 
 This proposal focuses on a solution that is faster in relation to a fully configurable approach, but on the other hand will require maintenance and app updates every-time a new rule is added. It's advisable that any new rule added becomes configurable. For example, adding a general calendar rule to limit the amount of night shifts a company does per month to 5 would require adding another level of rules: shift level. This requires to add one more aggregation to ValidatableScheduleService, similar to what is done at Team or Employee level, and one more keyed service and validate the amount of night shifts. To increase flexibility, the configuration of the app would have to include a configuration for the max shifts per kind of shift and per month. 
+
+
+# Alternative
+
+In a scenario where this would be part of a more complex system that would have a back-office that allowed managers to specify the rules without the need for developers to constantly update the system, the prior approach would not suffice. App performance would be sacrificed for a more customisable system. 
+
+Instead of a list of very well defined DTOs, a List<Dictionary<string, object>> would be used instead. This would allow for a more generic approach on validations. The validations configuration would be loaded from appsettings with default values, while allowing back-office to change them. The configuration would have (roughly) a structure like the one bellow and would require only maintenance when adding rules with a non supported structure. 
+
+The main algorithm would differ much from the ones proposed in previous section diagrams, but in the place of well defined levels of validations will be flexible levels. The ideal back-office for this application would allow managers to set rules using a graphical interface that in backend would be translated into a configuration structure. 
+
+``` json
+
+    {
+        "entryValidations":[{
+            "validateField": "shift",
+            "values": "[morning,afternoon,night]",
+            "on": {
+                "validateField": "pto",
+                "values":"true"
+            },
+            "message":"Shift must be empty on PTO for _EmployeeID_ at _Date_"
+        },
+        ...],
+        "aggregatedValidations":[
+            {
+                "aggregateField": "EmployeeId",
+                "groupBy": "Date",
+                "operation"{
+                    "name": "max",
+                    "values": "3",
+                    "message": "Employee with id _EmployeeId_ has more than 3 shifts at _Date_.
+                }
+            },
+            ...
+        ],
+    }
+
+```
+
+> [!Note]
+> This is just a rough example just for a thought exercise.
+
+
+
+
+
+
+
+
+
 
 
