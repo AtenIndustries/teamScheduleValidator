@@ -128,27 +128,28 @@ RuleFor(employeeScheduleList => employeeScheduleList)
         var firstSchedule = employeeScheduleList.FirstOrDefault();
         int employeeId = firstSchedule?.EmployeeId ?? 0; 
  
-        foreach (string contractType in validContractTypes)
+        foreach (string shift in validShifts)
         { 
-            if (!maxConsecutiveDaysContractType.TryGetValue(contractType, out int maxConsecutiveDays))
+            if (!maxConsecutiveDaysShift.TryGetValue(shift, out int maxConsecutiveDays))
             {
                 maxConsecutiveDays = int.MaxValue;
-            } 
-            var consecutiveCounts = GetConsecutiveDayCounts(contractType, employeeScheduleList); 
-            int countInvalid = consecutiveCounts.FirstOrDefault(count => count > maxConsecutiveDays);
+            }  
 
-            if (countInvalid > 0) 
+            bool invalidCount = !IsBellowMaxConsecutiveDaysForShift(employeeScheduleList, shift, maxConsecutiveDays)
+
+            if (invalidCount ) 
             { 
                 context.AddFailure(new FluentValidation.Results.ValidationFailure(
                     nameof(employeeScheduleList),
-                    $"Employee with id {employeeId} has {countInvalid} consecutive days of work for contract type '{contractType}'. Max allowed is {maxConsecutiveDays}."
+                    $"Employee with id {employeeId} has more than {maxConsecutiveDays} consecutive days of work for '{shift}' shift."
                 ));
             }
         }
     });
 ```
 > [!Note]
-> `maxConsecutiveDaysContractType` is a map loaded from configuration that sets the maximum consecutive days for contract type
+> `maxConsecutiveDaysShift` is a map loaded from configuration that sets the maximum consecutive days for shift
+> `IsBellowMaxConsecutiveDaysForShift` returns false when there are more than the allowed consecutive days for a given shift
 
 
 # Team level Validator
@@ -210,6 +211,9 @@ For test purpose, the validators would be injected with settings. Also, for the 
     "contractTypeShifts":{
         "full-time": ["morning", "afternoon", "night"],
         "part-time": ["morning", "afternoon"]
+    },
+    "maxConsecutiveDaysShift":{
+        "night": 1,
     }
 }
 ```
@@ -222,12 +226,12 @@ The unit tests would be written for each validator, by trying to replicate diffe
 #### Valid entry tests
 | Use case | Test scenario | Expected Result |
 | :--- | :--- | :--- |
-| **Employee on full-time contract working on a night shift** | `{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"night", "contractType":"full-time", "pto":false}` | Ok |
-| **Employee on full-time contract working on a morning shift** |`{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"morning", "contractType":"full-time", "pto":false}`  | Ok |
-| **Employee on part-time contract working on a afternoon shift** |`{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"part-time", "pto":false}`  | Ok |
-| **Employee on part-time contract working on a afternoon shift** |`{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"part-time", "pto":false}`  | Ok |
-| **Employee on part-time contract and on pto** |`{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"", "contractType":"part-time", "pto":true}`  | Ok |
-| **Employee on full-time contract and on pto** |`{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"", "contractType":"full-time", "pto":true}`  | Ok |
+| **Employee on full-time contract working on a night shift** | `{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"night", "contractType":"full-time", "pto":false}` | No validation errors |
+| **Employee on full-time contract working on a morning shift** |`{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"morning", "contractType":"full-time", "pto":false}`  | No validation errors  |
+| **Employee on part-time contract working on a afternoon shift** |`{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"part-time", "pto":false}`  | No validation errors  |
+| **Employee on part-time contract working on a afternoon shift** |`{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"part-time", "pto":false}`  | No validation errors  |
+| **Employee on part-time contract and on pto** |`{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"", "contractType":"part-time", "pto":true}`  | No validation errors  |
+| **Employee on full-time contract and on pto** |`{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"", "contractType":"full-time", "pto":true}`  | No validation errors  |
 
 #### Invalid entry tests
 | Use case | Test scenario | Expected Result |
@@ -238,16 +242,24 @@ The unit tests would be written for each validator, by trying to replicate diffe
 | **Employee with night shift on part-time** | `{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"night", "contractType":"part-time", "pto":false}` | Should throw validation error "Invalid shift night for part-time contract"|
 | **Employee with night shift on part-time and pto** | `{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"night", "contractType":"part-time", "pto":true}` | Should throw validation errors "Shift must be empty on PTO for 1 at 2026-09-24", "Invalid shift night for part-time contract"|
 
-The tests will have to assert success scenarios 
+### Team level validator tests
 
-- No shift set when pto is true
-- If shift is set, pto should be false
-- Part-time employees cannot be in night shift (check if this does not collide with team level validations)
+#### Valid entry tests
 
+Test input
+``` json
+[{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"night", "contractType":"full-time", "pto":false},
+{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-25", "shift":"morning", "contractType":"full-time", "pto":false},
+{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-26", "shift":"afternoon", "contractType":"full-time", "pto":false}
+{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-27", "shift":"afternoon", "contractType":"full-time", "pto":false}
+{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-28", "shift":"", "contractType":"full-time", "pto":true}
+]
+```
 
-
-
-
+| Use case | Test scenario | Expected Result |
+| :--- | :--- | :--- |
+| **Full-time employee with multiple schedule entries** | <pre>[<br>  {"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"night", "contractType":"full-time", "pto":false},<br>  {"employeeId":1, "team":"FantasticTeam", "date":"2026-09-25", "shift":"morning", "contractType":"full-time", "pto":false},<br>  {"employeeId":1, "team":"FantasticTeam", "date":"2026-09-26", "shift":"afternoon", "contractType":"full-time", "pto":false},<br>  {"employeeId":1, "team":"FantasticTeam", "date":"2026-09-27", "shift":"afternoon", "contractType":"full-time", "pto":false},<br>  {"employeeId":1, "team":"FantasticTeam", "date":"2026-09-28", "shift":"", "contractType":"full-time", "pto":true}<br>]</pre> | No validation errors |
+| **Full-time employee with consecutive night shifts** | <pre>[<br>  {"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"night", "contractType":"full-time", "pto":false},<br>  {"employeeId":1, "team":"FantasticTeam", "date":"2026-09-25", "shift":"night", "contractType":"full-time", "pto":false},<br>  {"employeeId":1, "team":"FantasticTeam", "date":"2026-09-26", "shift":"afternoon", "contractType":"full-time", "pto":false},<br>  {"employeeId":1, "team":"FantasticTeam", "date":"2026-09-27", "shift":"afternoon", "contractType":"full-time", "pto":false},<br>  {"employeeId":1, "team":"FantasticTeam", "date":"2026-09-28", "shift":"", "contractType":"full-time", "pto":true}<br>]</pre> | Should return validation error "Employee with id 1 has 2 consecutive days of work for contract type full-time. Max allowed is 1." |
 
 
 
