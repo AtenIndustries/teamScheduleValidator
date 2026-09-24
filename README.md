@@ -218,6 +218,7 @@ In each iteration:
 ## Testing
 
 There are going to be two kinds of tests in this project: Unit and Integrated tests. Unit tests will evaluate the validators individually. Integrated tests will evaluate the ValidatableScheduleService when injected with this validators.
+The ValidatableScheduleService is testable using unit testing, but for the objective of this exercise only tests integrating the implemented validators will be approached.
 For test purpose, the validators would be injected with settings. Also, for the purpose of this exercise, only specific tests will be described, so won't validate date formats for example.
 
 ``` json
@@ -272,14 +273,34 @@ The unit tests would be written for each validator, by trying to replicate diffe
 
 Test input
 ``` json
-[{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"night", "contractType":"full-time", "pto":false}, 
-{"employeeId":3, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"part-time", "pto":false}
-{"employeeId":4, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"full-time", "pto":false} 
-{"employeeId":4, "team":"FantasticTeam", "date":"2026-09-28", "shift":"", "contractType":"full-time", "pto":true}
-]
+<pre>[[<br>  
+  {"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"night", "contractType":"full-time", "pto":false},[<br>  
+  {"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"morning", "contractType":"full-time", "pto":false},[<br>  
+  {"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"full-time", "pto":false},[<br>  
+  {"employeeId":3, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"full-time", "pto":false},[<br>  
+  {"employeeId":6, "team":"AwesomeTeam", "date":"2026-09-28", "shift":"", "contractType":"full-time", "pto":true},[<br>  
+  {"employeeId":2, "team":"AwesomeTeam", "date":"2026-09-28", "shift":"night", "contractType":"full-time", "pto":false},[<br>  
+  {"employeeId":3, "team":"AwesomeTeam", "date":"2026-09-28", "shift":"morning", "contractType":"full-time", "pto":false},[<br>  
+  {"employeeId":4, "team":"AwesomeTeam", "date":"2026-09-28", "shift":"afternoon", "contractType":"full-time", "pto":false},[<br>   
+]</pre> 
 ```
 | Use case | Test scenario | Expected Result |
 | :--- | :--- | :--- |
-| **Team with one day fully covered and other day with everyone on pto** | <pre>[{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"night", "contractType":"full-time", "pto":false}, {"employeeId":2, "team":"FantasticTeam", "date":"2026-09-24", "shift":"morning", "contractType":"full-time", "pto":false}, {"employeeId":3, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"part-time", "pto":false}, {"employeeId":4, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"full-time", "pto":false}, {"employeeId":1, "team":"FantasticTeam", "date":"2026-09-28", "shift":"", "contractType":"full-time", "pto":true}, {"employeeId":2, "team":"FantasticTeam", "date":"2026-09-28", "shift":"", "contractType":"full-time", "pto":true}, {"employeeId":3, "team":"FantasticTeam", "date":"2026-09-28", "shift":"", "contractType":"part-time", "pto":true}, {"employeeId":4, "team":"FantasticTeam", "date":"2026-09-28", "shift":"", "contractType":"full-time", "pto":true}]</pre> | No validation errors |
-| **Team has not all shifts for 2026-09-24** | <pre>[{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"night", "contractType":"full-time", "pto":false}, {"employeeId":3, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"part-time", "pto":false}, {"employeeId":4, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"full-time", "pto":false}, {"employeeId":4, "team":"FantasticTeam", "date":"2026-09-28", "shift":"", "contractType":"full-time", "pto":true}]</pre> | Should return validation error "Error on 2026-09-24: 2 filled shifts (expected: 3)" |
+| **Team with one day fully covered and other day with everyone on pto** | <pre>[<br>  {"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"night", "contractType":"full-time", "pto":false},<br>  {"employeeId":2, "team":"FantasticTeam", "date":"2026-09-24", "shift":"morning", "contractType":"full-time", "pto":false},<br>   {"employeeId":3, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"part-time", "pto":false},<br>   {"employeeId":4, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"full-time", "pto":false}, <br>  {"employeeId":1, "team":"FantasticTeam", "date":"2026-09-28", "shift":"", "contractType":"full-time", "pto":true},<br>  {"employeeId":2, "team":"FantasticTeam", "date":"2026-09-28", "shift":"", "contractType":"full-time", "pto":true},<br>   {"employeeId":3, "team":"FantasticTeam", "date":"2026-09-28", "shift":"", "contractType":"part-time", "pto":true},<br>   {"employeeId":4, "team":"FantasticTeam", "date":"2026-09-28", "shift":"", "contractType":"full-time", "pto":true}<br>  ]</pre> | No validation errors |
+| **Team has not all shifts for 2026-09-24** | <pre>[<br>  {"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"night", "contractType":"full-time", "pto":false}, <br>  {"employeeId":3, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"part-time", "pto":false}, <br>  {"employeeId":4, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"full-time", "pto":false}, <br>  {"employeeId":4, "team":"FantasticTeam", "date":"2026-09-28", "shift":"", "contractType":"full-time", "pto":true}<br>  ]</pre> | Should return validation error "Error on 2026-09-24: 2 filled shifts (expected: 3)" |
+
+## Integrated tests
+
+This tests will validate the behaviour of the ValidatableScheduleService, not with mocked versions of the validators, but with the validators already implemented. 
+
+| Use case | Test scenario | Expected Result |
+| :--- | :--- | :--- |
+| **Valid schedule with multiple teams** | <pre>[[<br>    {"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"night", "contractType":"full-time", "pto":false},[<br>    {"employeeId":9, "team":"FantasticTeam", "date":"2026-09-24", "shift":"morning", "contractType":"full-time", "pto":false},[<br>    {"employeeId":8, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"full-time", "pto":false},[<br>    {"employeeId":3, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"full-time", "pto":false},[<br>    {"employeeId":6, "team":"AwesomeTeam", "date":"2026-09-28", "shift":"", "contractType":"full-time", "pto":true},[<br>    {"employeeId":2, "team":"AwesomeTeam", "date":"2026-09-28", "shift":"night", "contractType":"full-time", "pto":false},[<br>    {"employeeId":3, "team":"AwesomeTeam", "date":"2026-09-28", "shift":"morning", "contractType":"full-time", "pto":false},[<br>    {"employeeId":4, "team":"AwesomeTeam", "date":"2026-09-28", "shift":"afternoon", "contractType":"full-time", "pto":false},[<br>   ]</pre> | No validation errors |
+| **Schedule has employees with consecutive night shifts on part-time and doesn't have all shifts for one of the dates**|<pre>[[<br>    {"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"night", "contractType":"part-time", "pto":false},[<br>    {"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"night", "contractType":"part-time", "pto":false},[<br>    {"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"full-time", "pto":false},[<br>    {"employeeId":3, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"full-time", "pto":false},[<br>    {"employeeId":11, "team":"AwesomeTeam", "date":"2026-09-28", "shift":"", "contractType":"full-time", "pto":true},[<br>    {"employeeId":2, "team":"AwesomeTeam", "date":"2026-09-28", "shift":"night", "contractType":"full-time", "pto":false},[<br>    {"employeeId":3, "team":"AwesomeTeam", "date":"2026-09-28", "shift":"morning", "contractType":"full-time", "pto":false},[<br>    {"employeeId":4, "team":"AwesomeTeam", "date":"2026-09-28", "shift":"afternoon", "contractType":"full-time", "pto":false},[<br>    {"employeeId":5, "team":"AwesomeTeam", "date":"2026-09-29", "shift":"morning", "contractType":"full-time", "pto":false},[<br>    {"employeeId":6, "team":"AwesomeTeam", "date":"2026-09-29", "shift":"", "contractType":"full-time", "pto":true}[<br>  ]</pre> | <pre>Returns multiple validation errors like "Invalid shift night for part-time contract", <br>  "Employee with id 1} has more than 1 shifts at 2026-09-24.", <br>  "Employee with id 1 has more than 1 consecutive days of work for night shift." <br>  and "Error on 2026-09-29: 2 filled shifts (expected: 3)" </pre>|
+
+
+
+
+# Maintenance
+
 
