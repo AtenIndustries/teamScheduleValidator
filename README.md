@@ -106,7 +106,6 @@ Implements three specific rules. **shift** must be empty when **pto** is true, b
 ```csharp
     RuleFor(x => x.Shift).Empty().When(x => x.PTO).WithMessage(o=>$"Shift must be empty on PTO for {o.EmployeeID} at {o.Date:yyyy-MM-dd}");
     RuleFor(x => x.Shift).Must(shift => validShifts.Contains(shift)).When(x => !x.PTO).WithMessage(o=>$"Shift must be set when not on PTO for {o.EmployeeID} at {o.Date:yyyy-MM-dd}");
-
     foreach(string contractType in validContractTypes){
         RuleFor(x => x.Shift).Must(shift => contractTypeShifts[contractType].Contains(shift)).When(x=>x.ContractType == contractType && !x.PTO).WithMessage($"Invalid shift {shift} for {contractType} contract");
     }
@@ -200,16 +199,46 @@ In each iteration:
 
 
 ## Testing
-    There are going to be two kinds of tests in this project: Unit and Integrated tests. Unit tests will evaluate the validators individually. Integrated tests will evaluate the ValidatableScheduleService when injected with this validators.
-    For test purpose, the validators would be injected with settings 
 
-    [SPECIFY SETTINGS]
+There are going to be two kinds of tests in this project: Unit and Integrated tests. Unit tests will evaluate the validators individually. Integrated tests will evaluate the ValidatableScheduleService when injected with this validators.
+For test purpose, the validators would be injected with settings. Also, for the purpose of this exercise, only specific tests will be described, so won't validate date formats for example.
+
+``` json
+{
+    "validShifts": ["morning", "afternoon", "night"],
+    "validContractTypes": ["full-time", "part-time"],
+    "contractTypeShifts":{
+        "full-time": ["morning", "afternoon", "night"],
+        "part-time": ["morning", "afternoon"]
+    }
+}
+```
     
 ## Unit tests
-    The unit tests would be written for each validator, by trying to replicate different error and success scenarios.
+The unit tests would be written for each validator, by trying to replicate different error and success scenarios.
 
 ### Entry level validator tests
-    The tests will have to 
+
+#### Valid entry tests
+| Use case | Test scenario | Expected Result |
+| :--- | :--- | :--- |
+| **Employee on full-time contract working on a night shift** | `{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"night", "contractType":"full-time", "pto":false}` | Ok |
+| **Employee on full-time contract working on a morning shift** |`{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"morning", "contractType":"full-time", "pto":false}`  | Ok |
+| **Employee on part-time contract working on a afternoon shift** |`{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"part-time", "pto":false}`  | Ok |
+| **Employee on part-time contract working on a afternoon shift** |`{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"part-time", "pto":false}`  | Ok |
+| **Employee on part-time contract and on pto** |`{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"", "contractType":"part-time", "pto":true}`  | Ok |
+| **Employee on full-time contract and on pto** |`{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"", "contractType":"full-time", "pto":true}`  | Ok |
+
+#### Invalid entry tests
+| Use case | Test scenario | Expected Result |
+| :--- | :--- | :--- |
+| **Employee with invalid shift value** | `{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"noon", "contractType":"full-time", "pto":false}` | Should throw validation error "Shift must be set when not on PTO for 1 at 2026-09-24"|
+| **Employee with valid shift value when on pto** | `{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"afternoon", "contractType":"full-time", "pto":true}` | Should throw validation error "Shift must be empty on PTO for 1 at 2026-09-24"|
+| **Employee with invalid shift value when on pto** | `{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"noon", "contractType":"full-time", "pto":true}` | Should throw validation error "Shift must be empty on PTO for 1 at 2026-09-24"|
+| **Employee with night shift on part-time** | `{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"night", "contractType":"part-time", "pto":false}` | Should throw validation error "Invalid shift night for part-time contract"|
+| **Employee with night shift on part-time and pto** | `{"employeeId":1, "team":"FantasticTeam", "date":"2026-09-24", "shift":"night", "contractType":"part-time", "pto":true}` | Should throw validation errors "Shift must be empty on PTO for 1 at 2026-09-24", "Invalid shift night for part-time contract"|
+
+The tests will have to assert success scenarios 
 
 - No shift set when pto is true
 - If shift is set, pto should be false
