@@ -321,13 +321,15 @@ This tests will validate the behaviour of the ValidatableScheduleService, not wi
 This proposal focuses on a solution that is faster in relation to a fully configurable approach, but on the other hand will require maintenance and app updates every-time a new rule is added. It's advisable that any new rule added becomes configurable. For example, adding a general calendar rule to limit the amount of night shifts a company does per month to 5 would require adding another level of rules: shift level. This requires to add one more aggregation to ValidatableScheduleService, similar to what is done at Team or Employee level, and one more keyed service and validate the amount of night shifts. To increase flexibility, the configuration of the app would have to include a configuration for the max shifts per kind of shift and per month. 
 
 
-# Alternative
 
-In a scenario where this would be part of a more complex system that would have a back-office that allowed managers to specify the rules without the need for developers to constantly update the system, the prior approach would not suffice. App performance would be sacrificed for a more customisable system. 
+# Alternative Design — Configurable Rules (Back-Office Scenario)
 
-Instead of a list of very well defined DTOs, a List<Dictionary<string, object>> would be used instead. This would allow for a more generic approach on validations. The validations configuration would be loaded from appsettings with default values, while allowing back-office to change them. The configuration would have (roughly) a structure like the one bellow and would require only maintenance when adding rules with a non supported structure. For example, if the app already supports a rule to validate if shift only has a value in a set of valid values, this system would not need a new build to add a rule to validate if contractTypes value is only "full-time" or "part-time".  
+The approach described above assumes a fixed, developer-maintained set of (configurable) validation rules, that requires maintenance every time a new type of rule needs to be added. If this validator were part of a larger system with a back-office UI that let managers define or adjust rules without requiring code changes, that approach would no longer be sufficient — it would trade flexibility for performance and structure.
 
-The main algorithm would differ much from the ones proposed in previous section diagrams, but in the place of well defined levels of validations will be flexible levels. The ideal back-office for this application would allow managers to set rules using a graphical interface that in backend would be translated into a configuration structure. 
+
+Supporting manager-configurable rules means sacrificing some runtime performance and type safety in exchange for a system that can accommodate new rules without a new build or deployment. Instead of strongly-typed DTOs (`ScheduleInputDTO`, etc.), entries would be represented generically as `List<Dictionary<string, object>>`. This trades compile-time safety for structural flexibility — any field, and any rule referencing it, can be added purely through configuration.
+
+The configuration would have (roughly) a structure like the one bellow and would only require maintenance when adding rules with a non supported structure. For example, if the app already supports a rule to validate if "fieldA" only has a value in a set of valid values, this system would not need a new build to add a similar rule for "fieldB". 
 
 ``` json
 
@@ -358,16 +360,6 @@ The main algorithm would differ much from the ones proposed in previous section 
 
 ```
 
-> [!Note]
-> This is just a rough example just for a thought exercise.
+The single-pass, sort-based control-break algorithm described earlier assumes fixed, well-defined validation levels (entry → employee → team) known at compile time. A configurable-rules system would need a more flexible engine instead: validation "levels" would themselves become data-driven rather than hardcoded, with the algorithm interpreting the configured rules at runtime rather than executing a fixed sequence of checks.
 
-
-
-
-
-
-
-
-
-
-
+Ideally, managers would define rules through a graphical interface (e.g. a rule builder), which would translate their input into the configuration structure above — removing the need for them to write or understand the underlying JSON/config format directly.
