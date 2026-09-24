@@ -301,6 +301,6 @@ This tests will validate the behaviour of the ValidatableScheduleService, not wi
 
 # Maintenance
 
-This proposal focuses on a solution that is faster, but on the other hand will require maintenance and app updates every-time a new rule is added. It's advisable that any new rule added becomes configurable. For example, adding a general calendar rule to limit the amount of night shifts a company does per month to 5 would require adding another level of rules: shift level. This requires to add one more aggregation to ValidatableScheduleService, similar to what is done at Team or Employee level, and one more keyed service and validate the amount of night shifts. To increase flexibility, the configuration of the app would have to include a configuration for the max shifts per kind of shift and per month. 
+This proposal focuses on a solution that is faster in relation to a fully configurable approach, but on the other hand will require maintenance and app updates every-time a new rule is added. It's advisable that any new rule added becomes configurable. For example, adding a general calendar rule to limit the amount of night shifts a company does per month to 5 would require adding another level of rules: shift level. This requires to add one more aggregation to ValidatableScheduleService, similar to what is done at Team or Employee level, and one more keyed service and validate the amount of night shifts. To increase flexibility, the configuration of the app would have to include a configuration for the max shifts per kind of shift and per month. 
 
 
